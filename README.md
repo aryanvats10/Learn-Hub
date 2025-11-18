@@ -1,4 +1,4 @@
-# LearnHub - Modern Learning Management Platform
+# LearnHub - Your Center for Skill Enhancement
 
 A comprehensive full-stack Learning Management System (LMS) built with the MERN stack, featuring separate dashboards for administrators, teachers, and students with complete course management, assignments, attendance tracking, and note-taking capabilities.
 
