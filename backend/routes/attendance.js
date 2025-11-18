@@ -41,6 +41,7 @@ router.post('/', protect, authorize('teacher'), async (req, res) => {
 router.get('/course/:courseId', protect, async (req, res) => {
   try {
     const attendance = await Attendance.find({ course: req.params.courseId })
+      .populate('course', 'title')
       .populate('records.student', 'name email')
       .sort({ date: -1 });
 

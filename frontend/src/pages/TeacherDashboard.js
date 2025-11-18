@@ -170,38 +170,89 @@ const TeacherDashboard = () => {
   };
 
   const handleCourseSelectForAttendance = async (courseId) => {
-    setNewAttendance({ ...newAttendance, courseId });
+    if (!courseId) {
+      setSelectedCourseStudents([]);
+      setNewAttendance(prev => ({ ...prev, courseId: '', records: [] }));
+      return;
+    }
+
+    setNewAttendance(prev => ({ ...prev, courseId }));
+    
     try {
       const response = await api.get(`/enrollments/course/${courseId}/students`);
       const students = response.data.students || [];
+      console.log('Fetched students:', students);
+      
+      if (students.length === 0) {
+        alert('No students enrolled in this course yet.');
+      }
+      
       setSelectedCourseStudents(students);
+      
+      const records = students.map(student => ({
+        student: student._id,
+        status: 'present',
+        remarks: ''
+      }));
+      
+      console.log('Initial records:', records);
+      
       setNewAttendance(prev => ({
         ...prev,
-        records: students.map(student => ({
-          student: student._id,
-          status: 'present',
-          remarks: ''
-        }))
+        courseId,
+        records
       }));
     } catch (error) {
       console.error('Error fetching students:', error);
+      alert('Failed to fetch students: ' + (error.response?.data?.message || error.message));
       setSelectedCourseStudents([]);
+      setNewAttendance(prev => ({ ...prev, records: [] }));
     }
   };
 
   const handleAttendanceStatusChange = (studentId, status) => {
-    setNewAttendance(prev => ({
-      ...prev,
-      records: prev.records.map(record =>
+    setNewAttendance(prev => {
+      const updatedRecords = prev.records.map(record =>
         record.student === studentId ? { ...record, status } : record
-      )
-    }));
+      );
+      console.log('Updated records:', updatedRecords);
+      return {
+        ...prev,
+        records: updatedRecords
+      };
+    });
   };
 
   const handleCreateAttendance = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/attendance', newAttendance);
+      // Validate that we have students and records
+      if (!newAttendance.courseId) {
+        alert('Please select a course');
+        return;
+      }
+      if (!newAttendance.date) {
+        alert('Please select a date');
+        return;
+      }
+      if (!newAttendance.topic) {
+        alert('Please enter a topic');
+        return;
+      }
+      if (!newAttendance.records || newAttendance.records.length === 0) {
+        alert('No students found for this course. Please ensure students are enrolled.');
+        return;
+      }
+
+      const attendanceData = {
+        courseId: newAttendance.courseId,
+        date: newAttendance.date,
+        topic: newAttendance.topic,
+        records: newAttendance.records
+      };
+
+      console.log('Submitting attendance:', attendanceData);
+      await api.post('/attendance', attendanceData);
       alert('Attendance recorded successfully!');
       setShowCreateAttendanceModal(false);
       fetchAttendance();
@@ -213,7 +264,8 @@ const TeacherDashboard = () => {
       });
       setSelectedCourseStudents([]);
     } catch (error) {
-      alert('Failed to record attendance: ' + (error.response?.data?.message || 'Unknown error'));
+      console.error('Attendance error:', error);
+      alert('Failed to record attendance: ' + (error.response?.data?.message || error.message || 'Unknown error'));
     }
   };
 
@@ -542,7 +594,10 @@ const TeacherDashboard = () => {
                 {filteredAttendance.map((record) => (
                   <div key={record._id} className="attendance-card">
                     <div className="attendance-header">
-                      <h3>{record.topic}</h3>
+                      <div>
+                        <h3>{record.topic}</h3>
+                        {record.course && <p className="course-name">{record.course.title}</p>}
+                      </div>
                       <span className="attendance-date">
                         {new Date(record.date).toLocaleDateString()}
                       </span>
